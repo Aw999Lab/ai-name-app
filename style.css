@@ -354,6 +354,11 @@ body {
 #api-status.success { color: #4CAF50; }
 #api-status.error { color: #C41E3A; }
 
+/* ===== 工具链接 ===== */
+.tool-links { text-align: center; margin-top: 12px; font-size: 13px; }
+.tool-links a { color: var(--gold); text-decoration: none; }
+.tool-links span { color: #DDD; margin: 0 8px; }
+
 /* ===== 响应式 ===== */
 @media (min-width: 480px) {
   body { max-width: 480px; margin: 0 auto; }
