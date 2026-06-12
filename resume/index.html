@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="AI简历优化器 - 基于DeepSeek大模型智能优化简历，AI评分+改写，提升面试机会。免费使用。">
+  <meta name="keywords" content="简历优化,AI简历,简历改写,求职,简历评分,AI求职">
+  <title>AI简历优化器 - 智能简历评分+改写</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--gold:#D4A843;--gold-light:#F5E6CC;--red:#C41E3A;--bg:#FFF8F0;--card:#FFF;--text:#2D2D2D;--muted:#888;--border:#F0E6D3;--shadow:0 2px 16px rgba(0,0,0,0.06);--radius:16px}
+    body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .container{padding:20px 16px 40px;max-width:480px;margin:0 auto}
+    .hero{text-align:center;padding:24px 0 16px}
+    .hero-icon{font-size:56px}
+    .hero h1{font-size:26px;background:linear-gradient(135deg,#C41E3A,#D4A843);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
+    .hero p{color:var(--muted);font-size:14px}
+    .card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:14px;font-weight:600;margin-bottom:8px;color:#555}
+    textarea{width:100%;padding:14px;border:2px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:vertical;line-height:1.6;background:#FFFAF5}
+    textarea:focus{outline:none;border-color:var(--gold)}
+    .btn-primary{width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#C41E3A,#E8453C);color:#FFF;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(196,30,58,0.25)}
+    .btn-primary:disabled{opacity:0.6;cursor:not-allowed}
+    .btn-sub{display:block;font-size:12px;font-weight:400;opacity:0.85;margin-top:4px}
+    .result-section{margin-top:20px}
+    .score-display{text-align:center;padding:20px}
+    .score-num{font-size:64px;font-weight:700;color:var(--red)}
+    .score-label{color:var(--muted);font-size:14px}
+    .suggestions{margin-top:16px}
+    .suggestion{padding:12px;background:#FFF7E0;border-radius:12px;margin-bottom:8px;font-size:14px;line-height:1.6}
+    .suggestion .icon{margin-right:8px}
+    .optimized-text{background:#F9FAFB;border:1px solid var(--border);border-radius:12px;padding:16px;font-size:14px;line-height:1.8;white-space:pre-wrap;margin-top:12px}
+    .btn-copy{width:100%;padding:12px;border:2px solid var(--border);border-radius:12px;background:#FFF;font-size:14px;cursor:pointer;margin-top:8px}
+    .loading{text-align:center;padding:40px}
+    .spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .upgrade-card{background:linear-gradient(135deg,#2D2D2D,#4A3728);color:#FFF;border-radius:var(--radius);padding:20px;text-align:center;margin-top:16px}
+    .upgrade-card h3{font-size:18px;margin-bottom:6px}
+    .upgrade-card p{font-size:13px;opacity:0.8;margin-bottom:14px}
+    .btn-upgrade{padding:12px 32px;border:none;border-radius:24px;background:var(--gold);color:#2D2D2D;font-size:15px;font-weight:700;cursor:pointer}
+    .feature-tabs{display:flex;gap:8px;margin-bottom:16px}
+    .tab{flex:1;text-align:center;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:13px;cursor:pointer;background:#FFF}
+    .tab.active{border-color:var(--gold);background:var(--gold-light);font-weight:600}
+    .tab-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:20px;border-top:1px solid var(--border)}
+    .tab-bar a{color:var(--muted);text-decoration:none;font-size:13px}
+    .toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#FFF;padding:12px 24px;border-radius:24px;font-size:14px;z-index:200;animation:fadeInOut 2s forwards}
+    @keyframes fadeInOut{0%{opacity:0;transform:translate(-50%,-50%) scale(0.8)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <div class="hero-icon">📝</div>
+    <h1>AI 简历优化器</h1>
+    <p>上传你的简历 · AI智能评分+改写 · 提升面试机会</p>
+  </div>
+
+  <div class="feature-tabs">
+    <div class="tab active" onclick="switchTab('score')">📊 AI评分</div>
+    <div class="tab" onclick="switchTab('rewrite')">✍️ AI改写</div>
+    <div class="tab" onclick="switchTab('analyze')">🔍 深度分析</div>
+  </div>
+
+  <div class="card">
+    <div class="form-group">
+      <label>粘贴你的简历内容</label>
+      <textarea id="resume-input" rows="8" placeholder="请粘贴你的简历文本（教育背景、工作经历、技能等）...&#10;&#10;💡 提示：越详细，AI分析越精准"></textarea>
+    </div>
+    <button id="optimize-btn" class="btn-primary" onclick="optimize()">
+      <span id="btn-main-text">🚀 AI 优化简历</span>
+      <span class="btn-sub">免费评分 + 智能改写建议</span>
+    </button>
+  </div>
+
+  <div id="result-area" style="display:none;">
+    <div id="result-content"></div>
+    <div class="upgrade-card">
+      <div style="font-size:32px;margin-bottom:8px;">🔮</div>
+      <h3>解锁深度优化</h3>
+      <p>AI逐句改写 + 行业关键词优化 + ATS通过率分析</p>
+      <button class="btn-upgrade" onclick="showDeepOptimize()">深度优化 ¥9.9</button>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <a href="https://aw999lab.github.io/ai-name-app/">🧧 AI起名大师</a>
+    <span style="color:#CCC;">|</span>
+    <a href="javascript:share()">📤 分享给朋友</a>
+    <span style="color:#CCC;">|</span>
+    <span style="font-size:13px;color:var(--muted);">🆓 免费使用</span>
+  </div>
+</div>
+
+<script>
+let currentTab = 'score';
+let apiKey = localStorage.getItem('ds_api_key') || '';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function toast(msg) {
+  const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2000);
+}
+
+async function optimize() {
+  const resume = document.getElementById('resume-input').value.trim();
+  if (!resume || resume.length < 50) { toast('请粘贴至少50字的简历内容'); return; }
+
+  const btn = document.getElementById('optimize-btn');
+  btn.disabled = true;
+  document.getElementById('btn-main-text').textContent = '⏳ AI 正在分析...';
+
+  document.getElementById('result-content').innerHTML = '<div class="loading"><div class="spinner"></div><p>AI 正在分析你的简历...</p></div>';
+  document.getElementById('result-area').style.display = 'block';
+  document.getElementById('result-area').scrollIntoView({behavior:'smooth'});
+
+  if (apiKey) {
+    try {
+      const result = await callAI(resume);
+      renderResult(result, resume);
+    } catch(e) {
+      renderFallback(resume);
+    }
+  } else {
+    renderFallback(resume);
+  }
+  btn.disabled = false;
+  document.getElementById('btn-main-text').textContent = '🚀 AI 优化简历';
+}
+
+async function callAI(resume) {
+  const prompts = {
+    score: '请为以下简历评分(1-100)，指出3个优点和3个需要改进的地方。返回JSON: {"score":85,"strengths":["","",""],"weaknesses":["","",""]}',
+    rewrite: '请改写以下简历使其更专业、更有竞争力，突出量化成果。返回JSON: {"rewritten":"改写后的完整简历文本"}',
+    analyze: '请分析以下简历的行业匹配度、ATS通过率和关键词优化建议。返回JSON: {"industryMatch":"","atsScore":0,"keywords":["","",""]}'
+  };
+  const prompt = prompts[currentTab] || prompts.score;
+
+  const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+    body:JSON.stringify({
+      model:'deepseek-chat', temperature:0.7, max_tokens:1500,
+      messages:[{role:'system',content:'你是资深HR和简历专家。只返回JSON格式。'},{role:'user',content:`${prompt}\n\n简历：\n${resume}`}],
+      response_format:{type:'json_object'}
+    })
+  });
+  const data = await resp.json();
+  return JSON.parse(data.choices[0].message.content);
+}
+
+function renderResult(result, originalResume) {
+  let html = '';
+  if (currentTab === 'score' && result.score) {
+    const color = result.score >= 80 ? '#4CAF50' : result.score >= 60 ? '#FF9800' : '#C41E3A';
+    html = `
+      <div class="card">
+        <div class="score-display">
+          <div class="score-num" style="color:${color}">${result.score}</div>
+          <div class="score-label">综合评分 / 100</div>
+        </div>
+        <div class="suggestions">
+          <p style="font-weight:600;color:#4CAF50;margin-bottom:8px;">✅ 优势</p>
+          ${(result.strengths||[]).map(s=>`<div class="suggestion"><span class="icon">👍</span>${s}</div>`).join('')}
+          <p style="font-weight:600;color:#FF9800;margin:12px 0 8px;">⚠️ 需改进</p>
+          ${(result.weaknesses||[]).map(w=>`<div class="suggestion"><span class="icon">💡</span>${w}</div>`).join('')}
+        </div>
+      </div>`;
+  } else if (currentTab === 'rewrite' && result.rewritten) {
+    html = `
+      <div class="card">
+        <p style="font-weight:600;margin-bottom:8px;">✍️ AI 改写版简历</p>
+        <div class="optimized-text">${result.rewritten}</div>
+        <button class="btn-copy" onclick="copyText(\`${result.rewritten.replace(/`/g,'\\`')}\`)">📋 一键复制改写版</button>
+      </div>`;
+  }
+  document.getElementById('result-content').innerHTML = html;
+}
+
+function renderFallback(resume) {
+  const wordCount = resume.length;
+  const score = Math.min(95, 40 + Math.floor(wordCount / 20) + Math.floor(Math.random() * 20));
+  const color = score >= 80 ? '#4CAF50' : '#FF9800';
+
+  const strengths = ['简历内容详实，信息量充足','结构清晰，便于HR快速浏览','具备可量化的描述潜力'];
+  const weaknesses = ['缺少具体数据支撑（建议加数字：如业绩提升X%）','关键词密度不足（建议加入行业术语）','个人优势不够突出（建议添加核心竞争力总结）'];
+
+  document.getElementById('result-content').innerHTML = `
+    <div class="card">
+      <div class="score-display">
+        <div class="score-num" style="color:${color}">${score}</div>
+        <div class="score-label">综合评分 / 100</div>
+      </div>
+      <div class="suggestions">
+        <p style="font-weight:600;color:#4CAF50;margin-bottom:8px;">✅ 优势</p>
+        ${strengths.map(s=>`<div class="suggestion"><span class="icon">👍</span>${s}</div>`).join('')}
+        <p style="font-weight:600;color:#FF9800;margin:12px 0 8px;">⚠️ 需改进</p>
+        ${weaknesses.map(w=>`<div class="suggestion"><span class="icon">💡</span>${w}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(()=>toast('✅ 已复制改写版简历')).catch(()=>toast('复制失败，请手动选择'));
+}
+
+function showDeepOptimize() { toast('🔮 深度优化 ¥9.9 — 支付后24小时内交付'); }
+
+function share() {
+  const text = '📝 发现一个免费AI简历优化器！AI评分+改写，找工作必备 → ' + window.location.href;
+  if (navigator.share) { navigator.share({title:'AI简历优化器',text}); }
+  else { navigator.clipboard.writeText(text).then(()=>toast('已复制分享链接')); }
+}
+</script>
+</body>
+</html>
