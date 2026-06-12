@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="AI起名大师 - 基于DeepSeek大模型和传统文化的智能宝宝起名工具。结合诗经楚辞唐诗宋词，八字五行分析，免费生成寓意深刻的好名字。">
+  <meta name="keywords" content="宝宝起名,AI起名,诗经起名,八字起名,免费起名,取名,名字大全,楚辞起名,五行起名">
+  <title>AI起名大师 - 智能宝宝取名 | 诗经楚辞 八字五行</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 首页 -->
+  <div id="home-screen" class="screen active">
+    <div class="hero">
+      <div class="hero-icon">🧧</div>
+      <h1>AI 起名大师</h1>
+      <p class="hero-sub">结合传统文化 · AI智能取名<br>给你的宝宝一个好名字</p>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">50万+</span><span class="stat-label">已取名</span></div>
+        <div class="stat"><span class="stat-num">98%</span><span class="stat-label">好评率</span></div>
+        <div class="stat"><span class="stat-num">5秒</span><span class="stat-label">出结果</span></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-group">
+        <label>宝宝姓氏 <span class="required">*</span></label>
+        <input type="text" id="surname" placeholder="请输入姓氏（如：张）" maxlength="2" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label>性别</label>
+        <div class="gender-toggle">
+          <button class="gender-btn" data-gender="男">👦 男宝</button>
+          <button class="gender-btn" data-gender="女">👧 女宝</button>
+          <button class="gender-btn active" data-gender="不限">🎁 不限</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>起名风格</label>
+        <div class="style-chips">
+          <span class="chip active" data-style="诗经楚辞">诗经楚辞</span>
+          <span class="chip" data-style="唐诗宋词">唐诗宋词</span>
+          <span class="chip" data-style="现代简约">现代简约</span>
+          <span class="chip" data-style="大气磅礴">大气磅礴</span>
+          <span class="chip" data-style="温婉优雅">温婉优雅</span>
+          <span class="chip" data-style="新颖独特">新颖独特</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>出生日期（选填，用于八字分析）</label>
+        <input type="date" id="birthdate">
+      </div>
+
+      <button id="generate-btn" class="btn-primary">
+        <span class="btn-text">✨ AI 智能起名</span>
+        <span class="btn-sub">免费生成 8 个好名字</span>
+      </button>
+
+      <p class="form-note">🆓 免费使用 · 无需注册 · 无限生成</p>
+      <div class="api-section">
+        <button class="api-toggle" onclick="toggleApiSettings()">⚙️ AI 设置</button>
+        <div class="api-settings" id="api-settings" style="display:none;">
+          <p class="api-hint">接入 DeepSeek API 获得真正的 AI 起名（<a href="https://platform.deepseek.com" target="_blank">免费获取 Key</a>，¥1 可用百万次）</p>
+          <input type="password" id="api-key" placeholder="粘贴 DeepSeek API Key" autocomplete="off">
+          <button class="btn-save-key" onclick="saveApiKey()">保存</button>
+          <span id="api-status"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 加载中 -->
+  <div id="loading-screen" class="screen">
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="loading-text" id="loading-main-text">AI 正在翻阅典籍...</p>
+      <p class="loading-sub" id="loading-sub-text">结合八字五行，为你精选好名</p>
+      <div class="loading-steps">
+        <span class="step done">📚 查阅典籍</span>
+        <span class="step" id="step-analyze">🧮 分析八字</span>
+        <span class="step" id="step-generate">✨ 生成名字</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结果页 -->
+  <div id="result-screen" class="screen">
+    <div class="result-header">
+      <button class="back-btn" onclick="goHome()">← 重新起名</button>
+      <h2 id="result-title">为你精选的名字</h2>
+      <p class="result-sub" id="result-info"></p>
+    </div>
+
+    <div id="name-list" class="name-list"></div>
+
+    <div class="result-actions">
+      <button class="btn-secondary" onclick="goHome()">🔄 再起一批</button>
+      <button class="btn-share" onclick="shareResult()">📤 分享结果</button>
+    </div>
+
+    <!-- 升级提示 -->
+    <div class="upgrade-card" id="upgrade-card">
+      <div class="upgrade-icon">🔮</div>
+      <h3>解锁深度分析</h3>
+      <p>查看八字五行分析、名字详细典故、人生运势解读</p>
+      <button class="btn-upgrade" onclick="showUpgrade()">查看详情 ¥9.9</button>
+      <p style="font-size:11px;color:#999;margin-top:8px;">已有 <span id="visitor-count">0</span> 位用户使用了AI起名大师</p>
+    </div>
+  </div>
+
+  <!-- 深度分析弹窗 -->
+  <div id="upgrade-modal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeUpgrade()">✕</span>
+      <div style="text-align:center;padding:20px 0;">
+        <div style="font-size:48px;margin-bottom:12px;">🔮</div>
+        <h3 style="font-size:20px;margin-bottom:8px;">深度八字分析 + 人生运势解读</h3>
+        <p style="color:#888;font-size:14px;line-height:1.8;margin-bottom:20px;">
+          基于出生日期的完整八字排盘<br>
+          五行缺失与补救建议<br>
+          名字与命运的深层关联<br>
+          终身运势走向分析
+        </p>
+        <div style="background:#FFF8F0;border-radius:16px;padding:16px;margin-bottom:16px;">
+          <p style="font-weight:700;color:#C41E3A;font-size:18px;">💰 ¥9.9/次</p>
+          <p style="color:#888;font-size:12px;">微信扫码支付后截图发我，24小时内交付分析报告</p>
+        </div>
+        <div style="margin-bottom:16px;" id="payment-area">
+          <p style="color:#888;font-size:13px;margin-bottom:12px;">📱 微信扫码支付 ¥9.9</p>
+          <div id="payment-qr-container" style="text-align:center;">
+            <img id="payment-qr" src="" alt="收款码" style="width:180px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:none;">
+            <div id="qr-placeholder" style="border:2px dashed #F0E6D3;border-radius:16px;padding:24px;cursor:pointer;" onclick="uploadQR()">
+              <p style="color:#999;font-size:14px;">📷 点击上传微信收款码</p>
+              <p style="color:#CCC;font-size:11px;">仅保存在你的浏览器中，不上传服务器</p>
+            </div>
+          </div>
+          <p style="color:#C41E3A;font-size:12px;margin-top:12px;">支付后截图联系，24小时内交付</p>
+        </div>
+        <button class="btn-upgrade" onclick="closeUpgrade()" style="width:100%;">我已知晓，关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 详情弹窗 -->
+  <div id="detail-modal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeDetail()">✕</span>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

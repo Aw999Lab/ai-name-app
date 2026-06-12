@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://aw999lab.github.io/ai-name-master/sitemap.xml
