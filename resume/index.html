@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="AI简历优化器 - 基于DeepSeek大模型智能优化简历，AI评分+改写，提升面试机会。免费使用。">
   <meta name="keywords" content="简历优化,AI简历,简历改写,求职,简历评分,AI求职">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <title>AI简历优化器 - 智能简历评分+改写</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -278,25 +278,22 @@ function exportPDF() {
   if (!content) { toast('请先生成简历'); return; }
   var text = content.textContent;
 
-  // 构建简历HTML
-  var html = '<div style="font-family:PingFang SC,Microsoft YaHei,sans-serif;padding:30px;color:#2D2D2D;max-width:750px;">';
-  html += '<h1 style="text-align:center;font-size:22px;border-bottom:2px solid #C41E3A;padding-bottom:10px;margin-bottom:15px;">个人简历</h1>';
-  html += '<div style="font-size:14px;line-height:2.2;">';
-  html += text.replace(/\n/g, '<br>').replace(/【(.+?)】/g, '<h3 style="color:#C41E3A;font-size:15px;margin:16px 0 4px 0;border-left:3px solid #C41E3A;padding-left:8px;">$1</h3>');
-  html += '</div></div>';
-
-  // 用html2pdf下载
-  toast('📄 正在生成PDF...');
-  var opt = {
-    margin: [10, 10],
-    filename: '定制简历.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
-  html2pdf().set(opt).from(html).save().then(function() {
-    toast('✅ PDF已下载');
-  });
+  var w = window.open('', '_blank', 'width=800,height=600');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>个人简历</title>');
+  w.document.write('<style>');
+  w.document.write('@media print { body { -webkit-print-color-adjust: exact; } }');
+  w.document.write('body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;padding:40px 50px;line-height:2.2;color:#2D2D2D;max-width:800px;margin:0 auto}');
+  w.document.write('h1{text-align:center;font-size:22px;border-bottom:2px solid #C41E3A;padding-bottom:10px}');
+  w.document.write('h3{color:#C41E3A;font-size:15px;margin:16px 0 4px;border-left:3px solid #C41E3A;padding-left:8px}');
+  w.document.write('p{font-size:14px;margin:4px 0}');
+  w.document.write('</style></head><body>');
+  w.document.write('<h1>个人简历</h1>');
+  w.document.write('<div style="font-size:14px;">');
+  w.document.write(text.replace(/\n/g, '<br>').replace(/【(.+?)】/g, '<h3>$1</h3>'));
+  w.document.write('</div></body></html>');
+  w.document.close();
+  // 等渲染完成后自动弹出打印
+  setTimeout(function() { w.print(); }, 600);
 }
 
 function share() {
