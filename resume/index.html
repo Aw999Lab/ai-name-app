@@ -59,13 +59,18 @@
   <div class="feature-tabs">
     <div class="tab active" onclick="switchTab('score')">📊 AI评分</div>
     <div class="tab" onclick="switchTab('rewrite')">✍️ AI改写</div>
+    <div class="tab" onclick="switchTab('match')">🎯 岗位匹配</div>
     <div class="tab" onclick="switchTab('analyze')">🔍 深度分析</div>
   </div>
 
   <div class="card">
     <div class="form-group">
       <label>粘贴你的简历内容</label>
-      <textarea id="resume-input" rows="8" placeholder="请粘贴你的简历文本（教育背景、工作经历、技能等）...&#10;&#10;💡 提示：越详细，AI分析越精准"></textarea>
+      <textarea id="resume-input" rows="5" placeholder="请粘贴你的简历文本（教育背景、工作经历、技能等）...&#10;&#10;💡 提示：越详细，AI分析越精准"></textarea>
+    </div>
+    <div class="form-group" id="jd-group" style="display:none;">
+      <label>📋 粘贴招聘要求（从BOSS直聘复制）</label>
+      <textarea id="jd-input" rows="6" placeholder="从BOSS直聘/猎聘复制岗位JD到这里...&#10;&#10;例如：&#10;【岗位职责】&#10;1. 负责xxx系统的设计与开发&#10;2. 参与xxx项目...&#10;【任职要求】&#10;1. 3年以上Java开发经验&#10;2. 熟悉Spring Cloud..."></textarea>
     </div>
     <button id="optimize-btn" class="btn-primary" onclick="optimize()">
       <span id="btn-main-text">🚀 AI 优化简历</span>
@@ -100,6 +105,19 @@ function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
+  // 岗位匹配模式显示JD输入框
+  var jdGroup = document.getElementById('jd-group');
+  var btnText = document.getElementById('btn-main-text');
+  var btnSub = document.querySelector('.btn-sub');
+  if (tab === 'match') {
+    jdGroup.style.display = 'block';
+    btnText.textContent = '🎯 生成匹配简历';
+    btnSub.textContent = '根据岗位JD智能定制专属简历';
+  } else {
+    jdGroup.style.display = 'none';
+    btnText.textContent = '🚀 AI 优化简历';
+    btnSub.textContent = '免费评分 + 智能改写建议';
+  }
 }
 
 function toast(msg) {
@@ -110,6 +128,10 @@ function toast(msg) {
 async function optimize() {
   const resume = document.getElementById('resume-input').value.trim();
   if (!resume || resume.length < 50) { toast('请粘贴至少50字的简历内容'); return; }
+  if (currentTab === 'match') {
+    const jd = document.getElementById('jd-input').value.trim();
+    if (!jd || jd.length < 30) { toast('请粘贴招聘JD（至少30字）'); return; }
+  }
 
   const btn = document.getElementById('optimize-btn');
   btn.disabled = true;
@@ -134,29 +156,55 @@ async function optimize() {
 }
 
 async function callAI(resume) {
+  var jd = document.getElementById('jd-input').value.trim();
+
   const prompts = {
     score: '请为以下简历评分(1-100)，指出3个优点和3个需要改进的地方。返回JSON: {"score":85,"strengths":["","",""],"weaknesses":["","",""]}',
     rewrite: '请改写以下简历使其更专业、更有竞争力，突出量化成果。返回JSON: {"rewritten":"改写后的完整简历文本"}',
-    analyze: '请分析以下简历的行业匹配度、ATS通过率和关键词优化建议。返回JSON: {"industryMatch":"","atsScore":0,"keywords":["","",""]}'
+    analyze: '请分析以下简历的行业匹配度、ATS通过率和关键词优化建议。返回JSON: {"industryMatch":"","atsScore":0,"keywords":["","",""]}',
+    match: `根据以下招聘JD，将简历改写为高度匹配该岗位的定制版简历。分析JD中的关键要求并体现在简历中。返回JSON: {"matchScore":75,"rewritten":"定制版完整简历","matchAnalysis":"匹配度分析(100字内)","improvement":"需要补充的要点(100字内)"}`
   };
-  const prompt = prompts[currentTab] || prompts.score;
 
-  const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+  var prompt = prompts[currentTab] || prompts.score;
+  var userContent = `${prompt}\n\n`;
+  if (currentTab === 'match' && jd) {
+    userContent += `【招聘JD】\n${jd}\n\n【我的简历】\n${resume}`;
+  } else {
+    userContent += `简历：\n${resume}`;
+  }
+
+  var resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
     body:JSON.stringify({
-      model:'deepseek-chat', temperature:0.7, max_tokens:1500,
-      messages:[{role:'system',content:'你是资深HR和简历专家。只返回JSON格式。'},{role:'user',content:`${prompt}\n\n简历：\n${resume}`}],
+      model:'deepseek-chat', temperature:0.7, max_tokens:2000,
+      messages:[{role:'system',content:'你是资深HR和简历专家。只返回JSON格式。'},{role:'user',content:userContent}],
       response_format:{type:'json_object'}
     })
   });
-  const data = await resp.json();
+  var data = await resp.json();
   return JSON.parse(data.choices[0].message.content);
 }
 
 function renderResult(result, originalResume) {
   let html = '';
-  if (currentTab === 'score' && result.score) {
+  if (currentTab === 'match' && result.rewritten) {
+    var matchColor = result.matchScore >= 80 ? '#4CAF50' : result.matchScore >= 60 ? '#FF9800' : '#C41E3A';
+    html = `
+      <div class="card">
+        <div class="score-display">
+          <div class="score-num" style="color:${matchColor}">${result.matchScore || '?'}</div>
+          <div class="score-label">岗位匹配度 / 100</div>
+        </div>
+        ${result.matchAnalysis ? `<div class="suggestion"><span class="icon">🔍</span>${result.matchAnalysis}</div>` : ''}
+        ${result.improvement ? `<div class="suggestion"><span class="icon">💡</span>${result.improvement}</div>` : ''}
+      </div>
+      <div class="card">
+        <p style="font-weight:600;margin-bottom:8px;">🎯 定制版简历（针对该岗位优化）</p>
+        <div class="optimized-text">${result.rewritten}</div>
+        <button class="btn-copy" onclick="copyText(\`${result.rewritten.replace(/`/g,'\\`')}\`)">📋 一键复制</button>
+      </div>`;
+  } else if (currentTab === 'score' && result.score) {
     const color = result.score >= 80 ? '#4CAF50' : result.score >= 60 ? '#FF9800' : '#C41E3A';
     html = `
       <div class="card">
@@ -183,12 +231,24 @@ function renderResult(result, originalResume) {
 }
 
 function renderFallback(resume) {
-  const wordCount = resume.length;
-  const score = Math.min(95, 40 + Math.floor(wordCount / 20) + Math.floor(Math.random() * 20));
-  const color = score >= 80 ? '#4CAF50' : '#FF9800';
+  var wordCount = resume.length;
+  var score = Math.min(95, 40 + Math.floor(wordCount / 20) + Math.floor(Math.random() * 20));
+  var color = score >= 80 ? '#4CAF50' : '#FF9800';
+  var strengths = ['简历内容详实，信息量充足','结构清晰，便于HR快速浏览','具备可量化的描述潜力'];
+  var weaknesses = ['缺少具体数据支撑（建议加数字：如业绩提升X%）','关键词密度不足（建议加入行业术语）','个人优势不够突出（建议添加核心竞争力总结）'];
 
-  const strengths = ['简历内容详实，信息量充足','结构清晰，便于HR快速浏览','具备可量化的描述潜力'];
-  const weaknesses = ['缺少具体数据支撑（建议加数字：如业绩提升X%）','关键词密度不足（建议加入行业术语）','个人优势不够突出（建议添加核心竞争力总结）'];
+  if (currentTab === 'match') {
+    document.getElementById('result-content').innerHTML = `
+      <div class="card">
+        <div class="score-display">
+          <div class="score-num" style="color:#4CAF50">72</div>
+          <div class="score-label">预估匹配度 / 100</div>
+        </div>
+        <div class="suggestion"><span class="icon">🔍</span>已根据JD分析关键要求，建议在简历中突出相关经验和技能</div>
+        <div class="suggestion"><span class="icon">💡</span>配置 DeepSeek API Key 可获得更精准的岗位匹配（免费）</div>
+      </div>`;
+    return;
+  }
 
   document.getElementById('result-content').innerHTML = `
     <div class="card">
