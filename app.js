@@ -473,6 +473,7 @@ function renderResults() {
         <button onclick="event.stopPropagation();copyName('${n.name}')">📋 复制</button>
         <button onclick="event.stopPropagation();showDetail(${i})">🔍 详情</button>
         <button onclick="event.stopPropagation();favoriteName(${i})">❤️ 收藏</button>
+        <button onclick="event.stopPropagation();generatePoster(${i})">📸 海报</button>
       </div>
     </div>
   `).join('');
@@ -562,12 +563,115 @@ function shareResult() {
   if (!state.names.length) return;
   const top3 = state.names.slice(0, 3).map(n => `${n.name}（${n.score}分）`).join('、');
   const text = `🧧 AI起名大师帮我给宝宝起了几个好名字：\n${top3}\n\n你也来试试 → ${window.location.href}`;
+
+  // 追踪分享次数
+  let shares = parseInt(localStorage.getItem('share_count') || '0') + 1;
+  localStorage.setItem('share_count', shares);
+
+  if (shares >= 3) {
+    localStorage.setItem('name_gen_count', '0');
+    state.freeCount = 0;
+    toast('🎉 已分享3次！免费生成次数已重置');
+  }
+
   if (navigator.share) {
     navigator.share({ title: 'AI起名大师', text: text });
   } else {
     copyName(text);
     toast('已复制分享文案，去粘贴给朋友吧');
   }
+}
+
+// 生成名字海报
+function generatePoster(index) {
+  const n = state.names[index];
+  if (!n) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 750;
+  canvas.height = 1334;
+  const ctx = canvas.getContext('2d');
+
+  // 背景渐变
+  const bg = ctx.createLinearGradient(0, 0, 0, 1334);
+  bg.addColorStop(0, '#FFF8F0');
+  bg.addColorStop(0.5, '#FFF0E0');
+  bg.addColorStop(1, '#FFE8D0');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 750, 1334);
+
+  // 装饰边框
+  ctx.strokeStyle = '#D4A843';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(30, 30, 690, 1274);
+
+  // 标题
+  ctx.fillStyle = '#C41E3A';
+  ctx.font = 'bold 48px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🧧 AI 起名大师', 375, 120);
+
+  // 名字
+  ctx.fillStyle = '#2D2D2D';
+  ctx.font = 'bold 80px "KaiTi","STKaiti","PingFang SC",serif';
+  ctx.fillText(n.name, 375, 280);
+
+  // 评分
+  ctx.fillStyle = '#D4A843';
+  ctx.font = 'bold 36px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText(`⭐ ${n.score}分 · ${n.element}属性`, 375, 350);
+
+  // 寓意
+  ctx.fillStyle = '#555';
+  ctx.font = '28px "PingFang SC","Microsoft YaHei",sans-serif';
+  const meaning = n.meaning.length > 30 ? n.meaning.slice(0, 30) + '...' : n.meaning;
+  ctx.fillText(meaning, 375, 430);
+
+  if (n.source) {
+    ctx.fillStyle = '#999';
+    ctx.font = 'italic 24px "PingFang SC","Microsoft YaHei",sans-serif';
+    const source = n.source.length > 40 ? n.source.slice(0, 40) + '...' : n.source;
+    ctx.fillText('📖 ' + source, 375, 490);
+  }
+
+  // 分隔线
+  ctx.strokeStyle = '#D4A843';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(150, 560);
+  ctx.lineTo(600, 560);
+  ctx.stroke();
+
+  // 八字分析
+  if (n.wuxingNote) {
+    ctx.fillStyle = '#B8860B';
+    ctx.font = '26px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText('🧮 ' + n.wuxingNote, 375, 620);
+  }
+
+  // 二维码占位
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(225, 1000, 300, 300);
+  ctx.strokeStyle = '#D4A843';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(225, 1000, 300, 300);
+
+  ctx.fillStyle = '#999';
+  ctx.font = '22px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('扫码免费使用', 375, 1160);
+  ctx.fillText('AI起名大师', 375, 1195);
+
+  // 底部
+  ctx.fillStyle = '#AAA';
+  ctx.font = '20px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('aw999lab.github.io/ai-name-app', 375, 1290);
+
+  // 保存
+  const link = document.createElement('a');
+  link.download = `${n.name}-AI起名大师.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+  toast('📸 名字海报已保存');
 }
 
 function showUpgrade() {
