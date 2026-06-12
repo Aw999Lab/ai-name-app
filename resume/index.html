@@ -66,7 +66,7 @@
 
   <div class="card">
     <div class="form-group">
-      <label>粘贴你的简历内容</label>
+      <label id="resume-label">粘贴你的简历内容</label>
       <textarea id="resume-input" rows="5" placeholder="请粘贴你的简历文本（教育背景、工作经历、技能等）...&#10;&#10;💡 提示：越详细，AI分析越精准"></textarea>
     </div>
     <div class="form-group" id="jd-group" style="display:none;">
@@ -112,9 +112,13 @@ function switchTab(tab) {
   var btnSub = document.querySelector('.btn-sub');
   if (tab === 'match') {
     jdGroup.style.display = 'block';
-    btnText.textContent = '🎯 生成匹配简历';
-    btnSub.textContent = '根据岗位JD智能定制专属简历';
+    document.getElementById('resume-label').textContent = '粘贴你的简历内容（选填）';
+    document.getElementById('resume-input').placeholder = '可选：粘贴你的简历让AI针对性优化...&#10;留空则由AI根据JD从头生成一份完整简历';
+    btnText.textContent = '🎯 一键生成简历';
+    btnSub.textContent = '只需粘贴JD，AI自动生成完整简历';
   } else {
+    document.getElementById('resume-label').textContent = '粘贴你的简历内容';
+    document.getElementById('resume-input').placeholder = '请粘贴你的简历文本（教育背景、工作经历、技能等）...\n\n💡 提示：越详细，AI分析越精准';
     jdGroup.style.display = 'none';
     btnText.textContent = '🚀 AI 优化简历';
     btnSub.textContent = '免费评分 + 智能改写建议';
@@ -128,10 +132,13 @@ function toast(msg) {
 
 async function optimize() {
   const resume = document.getElementById('resume-input').value.trim();
-  if (!resume || resume.length < 50) { toast('请粘贴至少50字的简历内容'); return; }
-  if (currentTab === 'match') {
+  const isMatch = currentTab === 'match';
+  // 岗位匹配模式：只需JD，简历可选
+  if (isMatch) {
     const jd = document.getElementById('jd-input').value.trim();
     if (!jd || jd.length < 30) { toast('请粘贴招聘JD（至少30字）'); return; }
+  } else {
+    if (!resume || resume.length < 50) { toast('请粘贴至少50字的简历内容'); return; }
   }
 
   const btn = document.getElementById('optimize-btn');
@@ -163,13 +170,19 @@ async function callAI(resume) {
     score: '请为以下简历评分(1-100)，指出3个优点和3个需要改进的地方。返回JSON: {"score":85,"strengths":["","",""],"weaknesses":["","",""]}',
     rewrite: '请改写以下简历使其更专业、更有竞争力，突出量化成果。返回JSON: {"rewritten":"改写后的完整简历文本"}',
     analyze: '请分析以下简历的行业匹配度、ATS通过率和关键词优化建议。返回JSON: {"industryMatch":"","atsScore":0,"keywords":["","",""]}',
-    match: `根据以下招聘JD，将简历改写为高度匹配该岗位的定制版简历。分析JD中的关键要求并体现在简历中。返回JSON: {"matchScore":75,"rewritten":"定制版完整简历","matchAnalysis":"匹配度分析(100字内)","improvement":"需要补充的要点(100字内)"}`
+    match: resume ?
+      `根据以下招聘JD，将我的简历改写为高度匹配该岗位的定制版简历。分析JD中的关键要求并体现在简历中。返回JSON: {"matchScore":75,"rewritten":"定制版完整简历","matchAnalysis":"匹配度分析(100字内)","improvement":"需要补充的要点(100字内)"}` :
+      `根据以下招聘JD，从头生成一份完全匹配该岗位的完整简历。虚构真实可信的个人信息、教育背景、工作经历、项目经验、技能和证书，全部紧密贴合JD要求。返回JSON: {"rewritten":"完整简历文本","matchAnalysis":"该岗位核心要求分析(100字内)"}`
   };
 
   var prompt = prompts[currentTab] || prompts.score;
+  if (currentTab === 'match' && typeof prompts.match === 'function') {
+    prompt = prompts.match(resume);
+  }
   var userContent = `${prompt}\n\n`;
   if (currentTab === 'match' && jd) {
-    userContent += `【招聘JD】\n${jd}\n\n【我的简历】\n${resume}`;
+    userContent += `【招聘JD】\n${jd}`;
+    if (resume) userContent += `\n\n【我的简历】\n${resume}`;
   } else {
     userContent += `简历：\n${resume}`;
   }
@@ -190,18 +203,19 @@ async function callAI(resume) {
 function renderResult(result, originalResume) {
   let html = '';
   if (currentTab === 'match' && result.rewritten) {
-    var matchColor = result.matchScore >= 80 ? '#4CAF50' : result.matchScore >= 60 ? '#FF9800' : '#C41E3A';
+    var hasScore = result.matchScore;
+    // 无简历时没有分数，直接展示生成结果
     html = `
-      <div class="card">
+      ${hasScore ? `<div class="card">
         <div class="score-display">
-          <div class="score-num" style="color:${matchColor}">${result.matchScore || '?'}</div>
+          <div class="score-num" style="color:${result.matchScore >= 80 ? '#4CAF50' : '#FF9800'}">${result.matchScore}</div>
           <div class="score-label">岗位匹配度 / 100</div>
         </div>
         ${result.matchAnalysis ? `<div class="suggestion"><span class="icon">🔍</span>${result.matchAnalysis}</div>` : ''}
         ${result.improvement ? `<div class="suggestion"><span class="icon">💡</span>${result.improvement}</div>` : ''}
-      </div>
+      </div>` : ''}
       <div class="card">
-        <p style="font-weight:600;margin-bottom:8px;">🎯 定制版简历（针对该岗位优化）</p>
+        <p style="font-weight:600;margin-bottom:8px;">${hasScore ? '🎯 定制版简历' : '✨ AI 根据JD生成的简历'}</p>
         <div class="optimized-text">${result.rewritten}</div>
         <button class="btn-copy" onclick="copyText(\`${result.rewritten.replace(/`/g,'\\`')}\`)">📋 一键复制</button>
         <button class="btn-copy" onclick="exportPDF()" style="margin-top:4px;">📄 导出PDF简历</button>
