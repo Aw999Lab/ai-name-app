@@ -203,6 +203,7 @@ function renderResult(result, originalResume) {
         <p style="font-weight:600;margin-bottom:8px;">🎯 定制版简历（针对该岗位优化）</p>
         <div class="optimized-text">${result.rewritten}</div>
         <button class="btn-copy" onclick="copyText(\`${result.rewritten.replace(/`/g,'\\`')}\`)">📋 一键复制</button>
+        <button class="btn-copy" onclick="exportPDF()" style="margin-top:4px;">📄 导出PDF简历</button>
       </div>`;
   } else if (currentTab === 'score' && result.score) {
     const color = result.score >= 80 ? '#4CAF50' : result.score >= 60 ? '#FF9800' : '#C41E3A';
@@ -270,6 +271,26 @@ function copyText(text) {
 }
 
 function showDeepOptimize() { toast('🔮 深度优化 ¥9.9 — 支付后24小时内交付'); }
+
+function exportPDF() {
+  var content = document.querySelector('.optimized-text');
+  if (!content) { toast('请先生成简历'); return; }
+  var text = content.textContent;
+  // 使用浏览器打印功能导出PDF
+  var win = window.open('', '_blank', 'width=800,height=600');
+  win.document.write('<html><head><meta charset="UTF-8"><title>个人简历</title>');
+  win.document.write('<style>');
+  win.document.write('body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;padding:40px;line-height:2;color:#2D2D2D;max-width:800px;margin:0 auto}');
+  win.document.write('h1{text-align:center;font-size:22px;border-bottom:2px solid #C41E3A;padding-bottom:10px}');
+  win.document.write('h3{color:#C41E3A;font-size:15px;margin-top:20px;border-left:3px solid #C41E3A;padding-left:8px}');
+  win.document.write('p{font-size:14px;margin:4px 0}');
+  win.document.write('</style></head><body>');
+  win.document.write('<h1>个人简历</h1>');
+  win.document.write(text.replace(/\\n/g, '<br>').replace(/【(.+?)】/g, '<h3>$1</h3>'));
+  win.document.write('</body></html>');
+  win.document.close();
+  setTimeout(function() { win.print(); }, 500);
+}
 
 function share() {
   const text = '📝 发现一个免费AI简历优化器！AI评分+改写，找工作必备 → ' + window.location.href;
